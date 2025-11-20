@@ -66,6 +66,7 @@ def run_entangled_experiments(config: EntangledPQCConfig | None = None) -> None:
         LogicGate.NAND,
         LogicGate.NOR,
         LogicGate.XOR,
+        LogicGate.XNOR,
     ]
     for gate in gates_to_learn:
         result = train_entangled_gate(gate, ent_config)

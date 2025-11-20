@@ -6,12 +6,14 @@ import numpy as np
 import pennylane.numpy as qnp
 
 from pqc.gates import LogicGate, build_dataset, truth_table_inputs
-from pqc.model import PQCConfig, TwoQubitPQC
 from pqc.report import display_qiskit_report
+
+from .config import AnglePQCConfig
+from .model import AngleEncodedTwoQubitPQC
 
 
 @dataclass
-class TrainingResult:
+class AngleTrainingResult:
     gate: LogicGate
     final_loss: float
     accuracy: float
@@ -23,16 +25,15 @@ class TrainingResult:
     loss_history: list[float]
 
 
-def train_gate(gate: LogicGate, config: PQCConfig) -> TrainingResult:
+def train_angle_gate(gate: LogicGate, config: AnglePQCConfig) -> AngleTrainingResult:
     dataset = build_dataset(gate)
-    pqc = TwoQubitPQC(config)
+    pqc = AngleEncodedTwoQubitPQC(config)
     history = pqc.fit(dataset)
     probabilities, predictions, targets = pqc.evaluate(dataset)
     accuracy = sum(int(p == t) for p, t in zip(predictions, targets)) / len(targets)
     final_loss = history[-1] if history else float("inf")
     converged = final_loss < config.convergence_tol
-
-    return TrainingResult(
+    return AngleTrainingResult(
         gate=gate,
         final_loss=final_loss,
         accuracy=accuracy,
@@ -45,19 +46,20 @@ def train_gate(gate: LogicGate, config: PQCConfig) -> TrainingResult:
     )
 
 
-def log_result(result: TrainingResult, config: PQCConfig) -> None:
+def log_angle_result(result: AngleTrainingResult, config: AnglePQCConfig) -> None:
     status = "성공" if result.accuracy == 1.0 else "제한"
-    print(f"\n[{result.gate.value}] 학습 {status}")
+    print(f"\n[Angle {result.gate.value}] 학습 {status}")
     print(f"  최종 손실: {result.final_loss:.6f} (수렴 기준 {config.convergence_tol})")
     print(f"  정확도: {result.accuracy * 100:.1f}%")
+    print(f"  인코딩 축/스케일: {config.angle_axis}/{config.angle_scale:.3f}")
     print(f"  매개변수: {np.round(result.params, 3)}")
     print("  입력별 추정 확률/예측/정답:")
     for bits, prob, pred, target in zip(truth_table_inputs(), result.probabilities, result.predictions, result.targets):
         print(f"    입력 {bits} -> P(1)={prob:.3f} / 예측={pred} / 정답={target}")
 
 
-def run_all_experiments() -> None:
-    config = PQCConfig()
+def run_angle_experiments(config: AnglePQCConfig | None = None) -> None:
+    angle_config = config or AnglePQCConfig()
     gates_to_learn = [
         LogicGate.AND,
         LogicGate.OR,
@@ -66,8 +68,8 @@ def run_all_experiments() -> None:
         LogicGate.XOR,
         LogicGate.XNOR,
     ]
-
     for gate in gates_to_learn:
-        result = train_gate(gate, config)
-        log_result(result, config)
+        result = train_angle_gate(gate, angle_config)
+        log_angle_result(result, angle_config)
         display_qiskit_report(result)
+

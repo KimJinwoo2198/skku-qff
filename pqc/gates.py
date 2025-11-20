@@ -15,6 +15,7 @@ class LogicGate(Enum):
     NAND = "NAND"
     NOR = "NOR"
     XOR = "XOR"
+    XNOR = "XNOR"
 
 
 GateFunction = Callable[[int, int], int]
@@ -26,6 +27,7 @@ GATE_FUNCTIONS: dict[LogicGate, GateFunction] = {
     LogicGate.NAND: lambda a, b: int(not (a & b)),
     LogicGate.NOR: lambda a, b: int(not (a | b)),
     LogicGate.XOR: lambda a, b: a ^ b,
+    LogicGate.XNOR: lambda a, b: int(not (a ^ b)),
 }
 
 
