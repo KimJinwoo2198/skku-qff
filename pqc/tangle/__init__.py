@@ -5,7 +5,6 @@ from typing import Any
 
 
 _EXPORT_MAP = {
-    "EntangledPQCConfig": ("pqc.tangle.config", "EntangledPQCConfig"),
     "EntangledTwoQubitPQC": ("pqc.tangle.model", "EntangledTwoQubitPQC"),
     "EntangledTrainingResult": ("pqc.tangle.workflow", "EntangledTrainingResult"),
     "train_entangled_gate": ("pqc.tangle.workflow", "train_entangled_gate"),

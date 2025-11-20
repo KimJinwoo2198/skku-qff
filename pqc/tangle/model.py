@@ -3,58 +3,46 @@ from __future__ import annotations
 import pennylane as qml
 import pennylane.numpy as qnp
 
-from pqc.model import TwoQubitPQC
-
-from .config import EntangledPQCConfig
+from pqc.model import PQCConfig, TwoQubitPQC
 
 
 class EntangledTwoQubitPQC(TwoQubitPQC):
-    """얽힘 게이트를 포함하는 2-큐비트 PQC."""
+    """얽힘과 비얽힘 게이트를 하나의 앤사츠 레이어에서 통합한 2-큐비트 PQC."""
 
-    config: EntangledPQCConfig
-
-    def __init__(self, config: EntangledPQCConfig):
-        self.config = config
-        super().__init__(config)
+    def __init__(self, config: PQCConfig | None = None):
+        """필수 하이퍼파라미터가 없다면 기본 PQC 설정을 사용."""
+        super().__init__(config or PQCConfig())
 
     @staticmethod
-    def _single_qubit_layer(inputs: qnp.ndarray, block_params: qnp.ndarray) -> None:
-        bit_inputs = [int(bit) for bit in inputs]
-        for wire in range(2):
-            theta, phi, lam, alpha, beta = block_params[wire]
-            if bit_inputs[0]:
-                qml.RY(alpha, wires=wire)
-            if len(bit_inputs) > 1 and bit_inputs[1]:
-                qml.RY(beta, wires=wire)
-            qml.RY(theta, wires=wire)
-            qml.RZ(phi, wires=wire)
-            qml.RY(lam, wires=wire)
+    def _basis_encoding(bits: qnp.ndarray) -> None:
+        """Figure 1의 첫 단계: 입력 비트를 Pauli-X로 인코딩."""
+        for wire, bit in enumerate(bits):
+            if int(bit) == 1:
+                qml.PauliX(wires=wire)
 
-    def _apply_entangler(self) -> None:
-        ctrl, tgt = self.config.entangle_order
-        self._run_entangler(ctrl, tgt)
-        if self.config.mirror_entangler:
-            self._run_entangler(tgt, ctrl)
-
-    def _run_entangler(self, control: int, target: int) -> None:
-        gate = self.config.entangler.upper()
-        wires = (control, target)
-        if gate == "CNOT":
-            qml.CNOT(wires=wires)
-        elif gate == "CZ":
-            qml.CZ(wires=wires)
-        elif gate == "ISWAP":
-            qml.ISWAP(wires=wires)
-        elif gate == "SWAP":
-            qml.SWAP(wires=wires)
-        else:  # pragma: no cover - 설정 오류
-            raise ValueError(f"지원하지 않는 얽힘 게이트: {self.config.entangler}")
-
-    def _circuit(self, inputs: qnp.ndarray, params: qnp.ndarray) -> qnp.ndarray:
-        self._basis_encoding(inputs)
+    @staticmethod
+    def _ansatz_layer(params: qnp.ndarray) -> None:
+        """단일 레이어에서 회전 게이트와 얽힘 게이트를 모두 적용."""
         for block in range(params.shape[0]):
             block_params = params[block]
-            self._single_qubit_layer(inputs, block_params)
-            self._apply_entangler()
-        return qml.expval(qml.PauliZ(0))
 
+            # 1) 비얽힘(단일 큐비트) 회전
+            for wire in range(2):
+                theta, phi, lam = block_params[wire]
+                qml.RY(theta, wires=wire)
+                qml.RZ(phi, wires=wire)
+                qml.RY(lam, wires=wire)
+
+            # 2) 얽힘 게이트 체인 (파라미터 재활용)
+            zz_angle = 0.5 * (block_params[0, 0] + block_params[1, 0])
+            xx_angle = 0.5 * (block_params[0, 2] + block_params[1, 2])
+            qml.IsingZZ(zz_angle, wires=(0, 1))
+            qml.CNOT(wires=(0, 1))
+            qml.IsingXX(xx_angle, wires=(0, 1))
+            qml.CNOT(wires=(1, 0))
+
+    def _circuit(self, inputs: qnp.ndarray, params: qnp.ndarray) -> qnp.ndarray:
+        """Figure 1 구조(기저 인코딩 → 앤사츠 → 측정)를 명시적으로 구현."""
+        self._basis_encoding(inputs)
+        self._ansatz_layer(params)
+        return qml.expval(qml.PauliZ(0))

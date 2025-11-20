@@ -31,7 +31,7 @@ class TwoQubitPQC:
 
     def _init_params(self, seed: int) -> qnp.ndarray:
         rng = np.random.default_rng(seed)
-        shape = (self.config.num_blocks, 2, 5)
+        shape = (self.config.num_blocks, 2, 3)
         return qnp.array(rng.uniform(-np.pi, np.pi, size=shape), requires_grad=True)
 
     @staticmethod
@@ -41,22 +41,17 @@ class TwoQubitPQC:
                 qml.PauliX(wires=wire)
 
     @staticmethod
-    def _ansatz_layer(inputs: Sequence[float], params: qnp.ndarray) -> None:
-        bit_inputs = [int(bit) for bit in inputs]
+    def _ansatz_layer(params: qnp.ndarray) -> None:
         for block in range(params.shape[0]):
             for wire in range(2):
-                theta, phi, lam, alpha, beta = params[block, wire]
-                if bit_inputs[0]:
-                    qml.RY(alpha, wires=wire)
-                if len(bit_inputs) > 1 and bit_inputs[1]:
-                    qml.RY(beta, wires=wire)
+                theta, phi, lam = params[block, wire]
                 qml.RY(theta, wires=wire)
                 qml.RZ(phi, wires=wire)
                 qml.RY(lam, wires=wire)
 
     def _circuit(self, inputs: Sequence[float], params: qnp.ndarray) -> qnp.ndarray:
         self._basis_encoding(inputs)
-        self._ansatz_layer(inputs, params)
+        self._ansatz_layer(params)
         return qml.expval(qml.PauliZ(0))
 
     @staticmethod

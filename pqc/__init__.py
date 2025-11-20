@@ -3,7 +3,6 @@
 from .gates import LogicGate, build_dataset, truth_table_inputs
 from .model import PQCConfig, TwoQubitPQC
 from .workflow import run_all_experiments, train_gate
-from .tangle.config import EntangledPQCConfig
 from .tangle.model import EntangledTwoQubitPQC
 from .tangle.workflow import (
     EntangledTrainingResult,
@@ -28,7 +27,6 @@ __all__ = [
     "TwoQubitPQC",
     "run_all_experiments",
     "train_gate",
-    "EntangledPQCConfig",
     "EntangledTwoQubitPQC",
     "EntangledTrainingResult",
     "train_entangled_gate",

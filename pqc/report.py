@@ -16,15 +16,10 @@ def _basis_encode(circuit: QuantumCircuit, inputs: Sequence[int]) -> None:
             circuit.x(wire)
 
 
-def _ansatz_layers(circuit: QuantumCircuit, params: np.ndarray, inputs: Sequence[int]) -> None:
-    encoded_bits = tuple(int(bit) for bit in inputs)
+def _ansatz_layers(circuit: QuantumCircuit, params: np.ndarray) -> None:
     for block in range(params.shape[0]):
         for wire in range(2):
-            theta, phi, lam, alpha, beta = params[block, wire]
-            if encoded_bits[0]:
-                circuit.ry(alpha, wire)
-            if len(encoded_bits) > 1 and encoded_bits[1]:
-                circuit.ry(beta, wire)
+            theta, phi, lam = params[block, wire]
             circuit.ry(theta, wire)
             circuit.rz(phi, wire)
             circuit.ry(lam, wire)
@@ -37,7 +32,7 @@ def build_quantum_circuit(
 ) -> QuantumCircuit:
     circuit = QuantumCircuit(2, 1, name=circuit_name)
     _basis_encode(circuit, inputs)
-    _ansatz_layers(circuit, params, inputs)
+    _ansatz_layers(circuit, params)
     circuit.barrier()
     circuit.measure(0, 0)
     return circuit
