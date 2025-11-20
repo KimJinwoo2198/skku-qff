@@ -1,0 +1,11 @@
+"""비얽힘 PQC 학습 스크립트."""
+
+from pqc.workflow import run_all_experiments
+
+
+def main() -> None:
+    run_all_experiments()
+
+
+if __name__ == "__main__":
+    main()
